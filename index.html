@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Cola</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .animate-value {
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        .result-card-final {
+            background-color: rgb(220 252 231);
+            color: rgb(5 46 22);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        .updating {
+            background-color: rgb(255, 255, 161);
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800 flex flex-col gap-12 m-12 justify-center items-center min-h-screen">
+    <div class="container bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full" id="results-data">
+        <!-- Título -->
+        <h1 class="text-2xl font-bold text-green-600 text-center mb-6">Simulador de Cola</h1>
+
+        <!-- Introducción -->
+        <div class="mb-6">
+            <p class="text-gray-700">
+                Este simulador calcula el tiempo estimado para procesar clientes en un sistema de colas
+                utilizando una fórmula de expansión de Taylor. Ingresa el número de clientes y observa los
+                resultados estimados y el tiempo real de ejecución al finalizar el proceso.
+            </p>
+        </div>
+
+        <!-- Entrada y control -->
+        <div class="flex justify-center gap-4 mb-6">
+            <label for="inputClientes" class="flex items-center">Número de clientes:</label>
+            <input type="number" id="inputClientes" min="1" max="100" value="5"
+                class="w-16 p-2 border-2 border-green-600 rounded-lg">
+            <button id="iniciarBtn"
+                class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition">Iniciar</button>
+        </div>
+
+        <!-- Contenedor de fórmula -->
+        <div class="mb-6">
+            <div class="p-4 bg-green-100 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold mb-2 text-green-700">Fórmula utilizada</h2>
+                <p class="text-gray-800" id="formulaContainer" class="formule">
+
+                </p>
+            </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+                class="result-card bg-gray-50 p-4 rounded-lg shadow transition-transform transform-gpu duration-500 ease-in-out">
+                <h2 class="text-xl font-semibold mb-2">Resultados en tiempo real</h2>
+                <div id="realTimeOutput">
+                    <p class="font-semibold">Clientes procesados: <span id="clientesProcesados"
+                            class="animate-value">0</span></p>
+                    <span class="text-sm text-gray-500">Número de clientes que han sido procesados hasta el
+                        momento.</span>
+                    <p class="font-semibold">Tiempo estimado para el cliente: <span id="tiempoEstimadoCliente"
+                            class="animate-value">0.00</span> ms</p>
+                    <span class="text-sm text-gray-500">Tiempo estimado en milisegundos para procesar el cliente
+                        actual.</span>
+                    <p class="font-semibold">Tiempo total acumulado: <span id="tiempoTotalAcumulado"
+                            class="animate-value">0.00</span> ms</p>
+                    <span class="text-sm text-gray-500">Tiempo total acumulado en milisegundos para procesar todos los
+                        clientes hasta ahora.</span>
+                </div>
+            </div>
+            <div class="result-card bg-gray-50 p-4 rounded-lg shadow transition-transform transform-gpu duration-500 ease-in-out"
+                id="finalResultCard">
+                <h2 class="text-xl font-semibold mb-2">Resultados finales</h2>
+                <div id="finalOutput">
+                    <p class="font-semibold">Total de clientes procesados: <span id="totalClientesProcesados">0</span>
+                    </p>
+                    <span class="text-sm">Número total de clientes procesados al finalizar la simulación.</span>
+                    <p class="font-semibold">Tiempo total estimado: <span id="tiempoTotalEstimado">0.00</span> ms</p>
+                    <span class="text-sm">Tiempo total estimado en milisegundos para procesar todos los clientes.</span>
+                    <p class="font-semibold">Tiempo real de simulación: <span id="tiempoRealSimulacion">0.000</span>
+                        segundos</p>
+                    <span class="text-sm">Tiempo real en segundos que tomó la simulación completa.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full" id="table-data">
+        <!-- Estado inicial -->
+        <h2 class="text-xl font-bold mb-4 text-green-600">Resultados</h2>
+        <p id="defaultMessage" class="text-gray-500">Por favor, inicia la simulación para mostrar los resultados.</p>
+        <p id="generatingMessage" class="text-gray-500 hidden">Generando tabla...</p>
+
+
+        <section id="table-content">
+            <!-- Tabla de resultados -->
+            <table id="resultsTable" class="hidden w-full text-left border-collapse border border-gray-300">
+                <thead class="bg-green-100">
+                    <tr>
+                        <th class="border border-gray-300 px-4 py-2">Cliente</th>
+                        <th class="border border-gray-300 px-4 py-2">Tiempo Necesario (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+
+            <!-- Paginación -->
+            <div id="pagination" class="hidden flex justify-center items-center mt-4 gap-2">
+                <button id="prevPage" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                    disabled>&laquo; Anterior</button>
+                <span id="pageIndicator" class="text-gray-700"></span>
+                <button id="nextPage" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">Siguiente
+                    &raquo;</button>
+            </div>
+        </section>
+
+    </div>
+
+
+
+
+    <script>
+        // Define las fórmulas para pantallas pequeñas y grandes
+        const formulaSmall = "$$T(n) = T(0) + T'(0)n + \\frac{T''(0)}{2!}n^2 + \\cdots$$";
+        const formulaLarge = "$$T(n) = T(0) + T'(0)n + \\frac{T''(0)}{2!}n^2 + \\frac{T^{(3)}(0)}{3!}n^3 + \\cdots$$";
+
+        // Selecciona el contenedor de la fórmula
+        const formulaContainer = document.getElementById("formulaContainer");
+
+        // Función para actualizar la fórmula según el tamaño de la pantalla
+        function updateFormula() {
+            const screenWidth = window.innerWidth;
+            if (screenWidth < 768) { // Tamaño para pantallas pequeñas
+                formulaContainer.textContent = formulaSmall;
+            } else { // Tamaño para pantallas grandes
+                formulaContainer.textContent = formulaLarge;
+            }
+
+            // Recarga MathJax para renderizar la fórmula
+            if (window.MathJax) {
+                MathJax.typesetPromise([formulaContainer]);
+            }
+        }
+
+        // Actualiza la fórmula al cargar la página
+        updateFormula();
+
+        // Actualiza la fórmula al redimensionar la ventana
+        window.addEventListener("resize", updateFormula);
+
+
+
+        const resultsPerPage = 10;
+        let results = [];
+        let currentPage = 1;
+
+        // Función para renderizar la tabla con paginación
+        function renderTable(page) {
+            const table = document.getElementById("resultsTable");
+            const body = document.getElementById("resultsBody");
+            const pagination = document.getElementById("pagination");
+            const pageIndicator = document.getElementById("pageIndicator");
+            const prevButton = document.getElementById("prevPage");
+            const nextButton = document.getElementById("nextPage");
+
+            // Calcular los índices de inicio y fin
+            const startIndex = (page - 1) * resultsPerPage;
+            const endIndex = Math.min(startIndex + resultsPerPage, results.length);
+
+            // Limpiar el contenido del cuerpo de la tabla
+            body.innerHTML = "";
+
+            // Agregar las filas correspondientes
+            for (let i = startIndex; i < endIndex; i++) {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td class="border border-gray-300 px-4 py-2">${results[i].cliente}</td>
+                    <td class="border border-gray-300 px-4 py-2">${results[i].tiempo.toFixed(2)} ms</td>
+                `;
+                body.appendChild(row);
+            }
+
+            // Actualizar el indicador de página
+            pageIndicator.textContent = `Página ${page} de ${Math.ceil(results.length / resultsPerPage)}`;
+
+            // Habilitar o deshabilitar botones de paginación
+            prevButton.disabled = page === 1;
+            nextButton.disabled = page >= Math.ceil(results.length / resultsPerPage);
+
+            // Mostrar tabla y paginación si hay resultados
+            if (results.length > 0) {
+                table.classList.remove("hidden");
+                pagination.classList.remove("hidden");
+            }
+        }
+
+        // Función para reiniciar resultados y tabla
+        function resetResults() {
+            results = [];
+            currentPage = 1;
+
+            document.getElementById("resultsBody").innerHTML = "";
+            document.getElementById("resultsTable").classList.add("hidden");
+            document.getElementById("pagination").classList.add("hidden");
+            document.getElementById("defaultMessage").classList.remove("hidden");
+            document.getElementById("generatingMessage").classList.add("hidden");
+        }
+
+        // Función para agregar resultados
+        function agregarResultado(cliente, tiempo) {
+            results.push({ cliente, tiempo });
+            if (results.length === 1) {
+                document.getElementById("defaultMessage").classList.add("hidden");
+            }
+            if (results.length <= currentPage * resultsPerPage) {
+                renderTable(currentPage);
+            }
+        }
+
+        // Manejo de botones de paginación
+        document.getElementById("prevPage").addEventListener("click", () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderTable(currentPage);
+            }
+        });
+
+        document.getElementById("nextPage").addEventListener("click", () => {
+            if (currentPage < Math.ceil(results.length / resultsPerPage)) {
+                currentPage++;
+                renderTable(currentPage);
+            }
+        });
+
+        // Función para mostrar feedback visual
+        function showUpdatingFeedback(element) {
+            element.classList.add("updating");
+            setTimeout(() => {
+                element.classList.remove("updating");
+            }, 500);
+        }
+
+        // Script principal
+        document.getElementById("iniciarBtn").addEventListener("click", function () {
+            const clientes = parseInt(document.getElementById("inputClientes").value);
+            document.getElementById("finalResultCard").classList.remove("result-card-final");
+
+            document.getElementById("results-data").scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+
+
+            // Reiniciar resultados antes de iniciar nueva simulación
+            resetResults();
+            document.getElementById("generatingMessage").classList.remove("hidden");
+            document.getElementById("table-content").style.display = "none";
+            iniciarSimulacion(clientes);
+        });
+
+        function iniciarSimulacion(clientes) {
+            const coeficientes = { T0: 2, T1: 3, T2: 1, T3: 0.5 };
+
+            let tiempoEstimadoTotal = 0;
+            let startTime = Date.now();
+
+            function calcularTiempo(n) {
+                const { T0, T1, T2, T3 } = coeficientes;
+                return T0 + T1 * n + (T2 / 2) * Math.pow(n, 2) + (T3 / 6) * Math.pow(n, 3);
+            }
+
+            function calcularDelay(clientes) {
+                const maxDelay = 500;
+                const minDelay = 5;
+                const maxClientes = 100;
+
+                return Math.max(
+                    minDelay,
+                    maxDelay - (maxDelay - minDelay) * (clientes / maxClientes)
+                );
+            }
+
+            async function mostrarResultadosEnTiempoReal(procesadas) {
+                const tiempoActual = calcularTiempo(procesadas);
+                tiempoEstimadoTotal += tiempoActual;
+
+                agregarResultado(procesadas, tiempoActual);
+
+                const clientesProcesadosElem = document.getElementById("clientesProcesados");
+                const tiempoEstimadoClienteElem = document.getElementById("tiempoEstimadoCliente");
+                const tiempoTotalAcumuladoElem = document.getElementById("tiempoTotalAcumulado");
+
+                clientesProcesadosElem.textContent = procesadas;
+                tiempoEstimadoClienteElem.textContent = tiempoActual.toFixed(2);
+                tiempoTotalAcumuladoElem.textContent = tiempoEstimadoTotal.toFixed(2);
+
+                showUpdatingFeedback(clientesProcesadosElem);
+                showUpdatingFeedback(tiempoEstimadoClienteElem);
+                showUpdatingFeedback(tiempoTotalAcumuladoElem);
+            }
+
+            function mostrarResultadosFinales(procesadas) {
+                const tiempoSimulacionReal = (Date.now() - startTime) / 1000;
+
+                document.getElementById("totalClientesProcesados").textContent = procesadas;
+                document.getElementById("tiempoTotalEstimado").textContent = tiempoEstimadoTotal.toFixed(2);
+                document.getElementById("tiempoRealSimulacion").textContent = tiempoSimulacionReal.toFixed(3);
+                document.getElementById("finalResultCard").classList.add("result-card-final");
+
+                // Renderizar la tabla y la paginación al final
+                renderTable(1);
+                document.getElementById("generatingMessage").classList.add("hidden");
+                document.getElementById("table-content").style.display = "block";
+                document.getElementById("table-data").scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+            }
+
+            (async function procesarClientes() {
+                const delay = calcularDelay(clientes);
+                for (let i = 1; i <= clientes; i++) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await mostrarResultadosEnTiempoReal(i);
+                }
+                mostrarResultadosFinales(clientes);
+            })();
+        }
+
+    </script>
+
+    <footer class="bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full text-gray-800">
+        <!-- Sección Superior -->
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+            <!-- Logo y descripción -->
+            <div class="text-center md:text-left">
+                <h2 class="text-2xl font-bold text-green-600">Simulador de Cola</h2>
+                <p class="text-sm text-gray-700">
+                    Simulador de colas para calcular el tiempo estimado de procesamiento de clientes.
+                </p>
+            </div>
+            <!-- Navegación -->
+            <nav class="flex space-x-4 text-sm text-gray-700">
+                <a href="https://github.com/CastDev-j" class="hover:underline">
+                    Acerca de
+                </a>
+                <a href="https://castdev-j.netlify.app/" class="hover:underline">
+                    Mi Portafolio
+                </a>
+                <a href="mailto:andres2004_cj@outlook.com" class="hover:underline">
+                    Contacto
+                </a>
+            </nav>
+        </div>
+
+        <div class="border-t border-gray-300 my-6"></div>
+
+        <!-- Estado -->
+        <div class="flex justify-center">
+            <div class="flex items-center space-x-4">
+                <span class="block w-6 h-6 bg-gray-400 rounded-full animate-pulse"></span>
+                <p class="text-gray-700 font-medium">Todo Funcionando</p>
+            </div>
+        </div>
+
+        <div class="border-t border-gray-300 my-6"></div>
+
+        <!-- Derechos -->
+        <div class="text-center text-sm text-gray-500">
+            <p>© 2024 CastDev-j.</p>
+        </div>
+    </footer>
+
+</body>
+
+</html>
